@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Live Webcam Stream with Emotion Detection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; 
+        }
+    </style>
+</head>
+
+<body class="relative">
+
+    <div class="flex flex-col relative">
+        <div class="justify-center relative">
+            <img id="video_stream" src="{{ url_for('video') }}" alt="Live Webcam Stream"
+                class="mx-auto max-w-full h-auto">
+            <div class="absolute top-0 left-0 right-0 bottom-0 flex items-end justify-center">
+                <div class="flex justify-center mb-2 bg-white bg-opacity-75	rounded-lg p-3"> <!-- Adjust margin to position near the bottom -->
+                    <img id="face" class="w-16 h-16 rounded-md" />
+                    <div class="text-black ml-2">
+                        <p id="name" class=""></p>
+                        <p id="date_time" class=""></p>
+                        <p id="text" class=""></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const video = document.getElementById('video_stream');
+        const emotionDisplay = document.getElementById('emotion_display');
+
+        setInterval(function () {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    // Update the page with the new data
+                    document.getElementById('name').textContent = data.name;
+                    document.getElementById('date_time').textContent = data.date_time;
+                    document.getElementById('text').textContent = data.text;
+                    if (data.face) {
+                        document.getElementById('face').src = 'data:face/jpeg;base64,' + data.face;
+                    }
+                });
+        }, 1000);
+
+        video.onplay = function () {
+            const chunks = [];
+            const source = new EventSource("/video");
+
+            source.onmessage = function (event) {
+                chunks.push(event.data);
+                const fullFrame = chunks.join('');
+                chunks = [];
+
+                video.srcObject = new Blob([fullFrame], { type: 'image/jpeg' });
+            };
+
+            source.onerror = function (error) {
+                console.error("Error:", error);
+                emotionDisplay.textContent = "Error: Could not receive video stream.";
+            };
+        };
+
+        source.onmessage = function (event) {
+            const emotion = event.data.split('Emotion: ')[1].split(' (')[0];
+            emotionDisplay.textContent = `Detected Emotion: ${emotion}`;
+        };
+    </script>
+</body>
+
+</html>
