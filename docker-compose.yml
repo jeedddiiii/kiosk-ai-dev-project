@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   admin-client:
@@ -16,6 +16,7 @@ services:
       - database
   admin-server:
     build: ./admin-server
+    restart: always
     ports:
       - "8080:8080"
     depends_on:
@@ -24,11 +25,17 @@ services:
     image: postgres:latest
     ports:
       - "5432:5432"
+    restart: always
     environment:
       POSTGRES_DB: facedetection
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: jedi2002
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - ./init_tables.sql:/docker-entrypoint-initdb.d/init_tables.sql
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8001:8080
     
   
