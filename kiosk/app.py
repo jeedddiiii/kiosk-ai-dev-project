@@ -7,7 +7,6 @@ import datetime
 import base64
 import io
 import pyttsx3
-import psycopg2
 from sklearn.metrics.pairwise import cosine_similarity
 import datetime
 import threading
