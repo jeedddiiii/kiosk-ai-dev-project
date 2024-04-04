@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useEffect } from "react";
+import Cropper from "react-cropper";
+import "cropperjs/dist/cropper.css";
 
 function NewUser() {
   const navigate = useNavigate();
@@ -15,28 +17,36 @@ function NewUser() {
   const [name, setName] = useState("");
   const [pictures, setPictures] = useState([]);
   const [pictureUrls, setPictureUrls] = useState([]);
+  const [croppedImages, setCroppedImages] = useState([]);
+  const cropperRefs = useRef([]);
 
   const handleNameChange = (event) => setName(event.target.value);
   const handlePicturesChange = (event) => {
-    setPictures(event.target.files);
-    setPictureUrls(
-      Array.from(event.target.files).map((file) => URL.createObjectURL(file))
+    const files = event.target.files;
+    const fileDataURLs = Array.from(files).map((file) =>
+      URL.createObjectURL(file)
     );
+    setPictures(files);
+    setPictureUrls(fileDataURLs);
   };
   const handleSave = async (event) => {
     event.preventDefault();
 
     const formData = new FormData();
     formData.append("name", name);
-    if (pictures.length > 0) {
-      formData.append("file", pictures[0]);
+
+    if (croppedImages.length > 0) {
+      croppedImages.forEach((croppedImage, index) => {
+        const file = dataURItoBlob(croppedImage);
+        formData.append(
+          "file",
+          file,
+          `croppedPicture${index}.jpeg` // include the .jpeg extension
+        );
+      });
     }
     try {
       console.log("handleSave is called");
-      formData.append("name", name);
-      pictures.forEach((picture, index) => {
-        formData.append("file", picture, `picture${index}`);
-      });
     } catch (error) {
       console.error("An error occurred before the fetch call:", error);
     }
@@ -59,9 +69,12 @@ function NewUser() {
     });
 
     if (response2.ok) {
-      const deleteResponse = await fetch("http://localhost:5000/delete_representations", {
-        method: "POST",
-      });
+      const deleteResponse = await fetch(
+        "http://localhost:5000/delete_representations",
+        {
+          method: "POST",
+        }
+      );
 
       if (!deleteResponse.ok) {
         throw new Error("Failed to delete representations");
@@ -78,6 +91,42 @@ function NewUser() {
 
     navigate("/");
   };
+  const onCrop = (index) => {
+    event.preventDefault(); // Prevent the default button behavior
+
+    const imageElement = cropperRefs.current[index];
+    const cropper = imageElement?.cropper;
+    const croppedDataURL = cropper
+      .getCroppedCanvas({
+        width: 300,
+        height: 300,
+        minWidth: 100,
+        minHeight: 100,
+        maxWidth: 4096,
+        maxHeight: 4096,
+        fillColor: "#fff",
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: "high",
+      })
+      .toDataURL("image/jpeg");
+
+    setCroppedImages((prev) => {
+      const updatedCroppedImages = [...prev];
+      updatedCroppedImages[index] = croppedDataURL;
+      return updatedCroppedImages;
+    });
+  };
+  function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(",")[1]);
+    const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    const blob = new Blob([ab], { type: mimeString });
+    return new File([blob], "croppedImage.jpeg", { type: mimeString });
+  }
 
   return (
     <div className="container-side">
@@ -98,24 +147,52 @@ function NewUser() {
                 onChange={handleNameChange}
               />
             </div>
-            <div class="mb-3">
-              <label class="form-label">Image</label>
+            <div className="mb-3">
+              <label className="form-label">Image</label>
               <input
                 type="file"
-                class="form-control"
+                className="form-control mb-3"
                 multiple
                 onChange={handlePicturesChange}
               />
-              {pictureUrls.map((url, index) => (
-                <img
-                  className="m-3"
-                  key={index}
-                  src={url}
-                  alt="Preview"
-                  style={{ width: "100px", height: "100px" }}
-                />
-              ))}
+              <div className="row">
+                <div className="col">
+                  {pictureUrls.map((url, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        width: "200px",
+                        height: "200px",
+                      }}
+                      className="mb-5"
+                    >
+                      <Cropper
+                        src={url}
+                        initialAspectRatio={1}
+                        guides={false}
+                        onCropEnd={() => onCrop(index)}
+                        ref={(el) => (cropperRefs.current[index] = el)}
+                        style={{ height: "200px", width: "200px" }}
+                      />
+                      <button onClick={(event) => onCrop(index, event)}>
+                        Crop Image
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="col">
+                  {croppedImages.map((croppedImage, index) => (
+                    <img
+                      key={index}
+                      src={croppedImage}
+                      alt={`Cropped Image ${index}`}
+                      style={{ width: "200px", height: "200px" }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
+
             <div>
               <button
                 className="btn btn-dark ml-auto  fw-bold me-2"
