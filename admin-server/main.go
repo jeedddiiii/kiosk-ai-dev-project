@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-contrib/cors"
 
 	"net/http"
@@ -30,5 +32,8 @@ func main() {
 	router.POST("/insert-transaction", InsertTransaction)
 	BotInit()
 
-	router.Run(":8080")
+	err := router.Run(":8080")
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
