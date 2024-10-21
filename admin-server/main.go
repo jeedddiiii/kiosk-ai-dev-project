@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-	// Create a new Gin router
 	router := gin.Default()
 
 	config := cors.DefaultConfig()
@@ -19,8 +18,9 @@ func main() {
 	router.Use(cors.New(config))
 
 	connectDb()
+
 	router.GET("/transaction", GetTransaction)
-	router.GET("summary", GetSummary)
+	router.GET("/summary", GetSummary)
 	router.GET("/", GetUsers)
 	router.POST("/new-user", CreateUser)
 	router.POST("/send-message", func(c *gin.Context) {
@@ -28,12 +28,12 @@ func main() {
 		c.Status(http.StatusOK)
 	})
 	router.DELETE("/delete-user/:id", DeleteUser)
-	router.POST("login", Login)
+	router.POST("/login", Login)
 	router.POST("/insert-transaction", InsertTransaction)
+
 	BotInit()
 
-	err := router.Run(":8080")
-	if err != nil {
+	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
